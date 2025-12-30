@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mgutz/str"
+	"golang.org/x/term"
 )
 
 type ICmdObjBuilder interface {
@@ -29,7 +30,9 @@ type CmdObjBuilder struct {
 var _ ICmdObjBuilder = &CmdObjBuilder{}
 
 func (self *CmdObjBuilder) New(args []string) *CmdObj {
-	cmdObj := self.NewWithEnviron(args, os.Environ())
+	env := os.Environ()
+	env = ensureGpgTtySet(env)
+	cmdObj := self.NewWithEnviron(args, env)
 	return cmdObj
 }
 
@@ -97,4 +100,27 @@ func (self *CmdObjBuilder) Quote(message string) string {
 		).Replace(message)
 	}
 	return quote + message + quote
+}
+
+// ensureGpgTtySet ensures that GPG_TTY is set in the environment if we're running in a TTY.
+// This is required for GPG to work properly with SSH agent-based signing.
+func ensureGpgTtySet(env []string) []string {
+	// Check if GPG_TTY is already set
+	for _, e := range env {
+		if strings.HasPrefix(e, "GPG_TTY=") {
+			return env
+		}
+	}
+
+	// Try to get the current TTY device
+	// We check if stdin (fd 0) is a terminal
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		// Get the TTY name for stdin
+		ttyName, err := getTtyName(int(os.Stdin.Fd()))
+		if err == nil && ttyName != "" {
+			env = append(env, "GPG_TTY="+ttyName)
+		}
+	}
+
+	return env
 }
