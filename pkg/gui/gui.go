@@ -565,7 +565,15 @@ func (gui *Gui) resetState(startArgs appTypes.StartArgs) types.Context {
 
 	contextTree := gui.contextTree()
 
-	initialScreenMode := initialScreenMode(startArgs, gui.Config)
+	// Preserve the current screen mode when switching repos (e.g., entering a submodule),
+	// if we have an existing state and no explicit screen mode is requested.
+	// Otherwise, determine the initial screen mode from start args or config.
+	var screenMode types.ScreenMode
+	if startArgs.ScreenMode == "" && startArgs.FilterPath == "" && startArgs.GitArg == appTypes.GitArgNone && gui.State != nil {
+		screenMode = gui.State.ScreenMode
+	} else {
+		screenMode = initialScreenMode(startArgs, gui.Config)
+	}
 
 	gui.State = &GuiRepoState{
 		ViewsSetup: false,
@@ -588,7 +596,7 @@ func (gui *Gui) resetState(startArgs appTypes.StartArgs) types.Context {
 			Diffing:          diffing.New(),
 			MarkedBaseCommit: marked_base_commit.New(),
 		},
-		ScreenMode: initialScreenMode,
+		ScreenMode: screenMode,
 		// TODO: only use contexts from context manager
 		ContextMgr:        NewContextMgr(gui, contextTree),
 		Contexts:          contextTree,

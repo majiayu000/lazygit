@@ -395,6 +395,7 @@ var tests = []*components.IntegrationTest{
 	submodule.Add,
 	submodule.Enter,
 	submodule.EnterNested,
+	submodule.EnterPreserveScreenMode,
 	submodule.Remove,
 	submodule.RemoveNested,
 	submodule.Reset,
